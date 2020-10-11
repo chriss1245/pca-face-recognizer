@@ -1,3 +1,2 @@
-ggplot2
 OpenImageR
-GGally
+rstudioapi

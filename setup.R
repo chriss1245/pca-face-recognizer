@@ -12,3 +12,18 @@ for (i in req)
         install.packages(i)
 rm(i, req)
 
+
+# a)
+pca <- function(X, center = T, scale = T){
+    x_bar <- rep(0, dim(X)[2])
+    X <- scale(X, center, scale)
+    
+    # Computing the covariance/correlation matrix
+    Sigma <- t(X)%*%X
+    
+    # Getting the eigenvectors and eigenvalues
+    eigen <- eigen(Sigma)
+    
+    return(list(mean = x_bar, D = eigen$values, P = eigen$vector))
+    
+}

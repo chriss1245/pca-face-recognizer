@@ -51,15 +51,112 @@ labels = sort(labels, method = 'radix') # sorting the labels
 images <- cbind.data.frame(label = labels, images) # creating a data frame with the labels and the images
 
 
+# Partitioning the data
+partition <- seq(1,150, 6) # I am using 2 images for testing for each person
+train_set <- images[-partition,-1]
+train_labels <- images[-partition,1]
+test_set <- images[partition,-1]
+test_labels <- images[partition,1]
+
 # Applying knn
-library(class)
-partition <- seq(1,150, 3) # I am using 2 images for testing for each person
+pred <- tunedKNN(train_set, train_labels, test_set, k = 1, dist = T )
 
-fit <- knn(images[-partition,-1], images[partition,-1],images[-partition,1] , k = 1 )
-
-# Confusion matrix
-t <- table(fit, images[partition, 1])
+# Mean distance
+pred[,2]
 
 #Accuracy
-sum(diag(t))/length(partition)
+sum(pred[,1] == test_labels)length(test_labels)
+
+
+# Creating a knn from scratch, added more methods of computing the distance, and the option of getting the mean distance of a label
+tunedKNN <- function(x, y, t, k = 1, method = 'euclidean', dist = F){ 
+    # x= matrix with the vectors of training
+    #y = labels of the train vectors
+    #t = matrix of the vectors that are being classified
+    #method = the kind of distance we are computing (euclidean, angle_based, mahalanobis)
+    #dist = Indicating T if we want to get the mean distance of each classification
+    
+    
+    # Calculates the distance between the vector that is being predicted and the vectors of the train matrix
+    distance <- function(v){ # 
+        d <- rep(Inf, length(x[,1]))
+        if(method == 'euclidean'){
+            for(i in 1:length(x[,1])){ # for each vector in the matrix x
+                d[i] <- sqrt(sum((v-x[i,])^2))
+            }
+        }
+        
+        if(method == 'angle_based'){
+            for(i in 1:length(x[,1])){
+                d[i] <- sum(v*x[i,])*sum(v*v)*sum(x[i,]*x[i,])
+            }
+        }
+        
+        if(method == 'mahalanobis'){
+            for(i in 1:length(x[,1])){
+                d[i] <- sum(abs(v-x[i,]))
+            }
+        }
+        
+        return(d)
+    }
+    
+    # Generates the label predicted
+    label <- function(d){
+        names(d) <- y   # assign the corresponding label to each distance
+        d <- sort(d) # sort the distance vector keeping their labels
+        d <- d[1:k] # keeps only the k minimum numbers
+        
+        options <- unique(names(d)) # takes the possible labels for the vector that is being predicted
+        
+        votes <- cbind(options, rep(0, length(options))) # allocates the space to save the count of labels
+        for(i in 1:length(votes[,1])){ # count the labels
+            votes[i,2] <- sum(names(d) == votes[i,1])
+        }
+        
+        idx <- which(votes[,2] == max(votes[,2])) # takes the index of the winner label
+        label <- votes[idx,1]
+        mean_dist <- mean(d[which(names(d) == label)])
+        
+        if(length(idx) > 1){ #If there is not a clear winner we label it as Inf
+            label = Inf
+            mean_dist <- mean(d)
+        }
+        
+        return(c(label, mean_dist))
+    }
+    
+    # Transform the labels into numbers (and keeps the distance if dist equal true) if needed 
+    cast <- function(){
+        if(class(y) == "numeric"){
+            labels[,1] <- as.numeric(as.character(labels[,1]))
+        }
+        labels[,2] <- round(as.numeric((as.character(labels[,2]))),6)
+        if(!dist){
+            labels <- labels[,-2]
+        }
+        return(labels)
+    }
+    
+    
+    ### Main program
+    # Iterates distance and label for each vector that is being predicted, and returns the values casted if needed
+    
+    x <- as.matrix(x)
+    y <- as.vector(y)
+    t <- as.matrix(t)
+    labels <- NULL
+    for(i in 1:length(t[,1])){
+            
+        d <- distance(v=t[i,])
+        labels <- rbind.data.frame(labels,c(label(d)))
+            
+    }
+        
+    return(cast())
+       
+}
+
+
+
 

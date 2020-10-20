@@ -84,15 +84,11 @@ tunedKNN <- function(x, y, t, k = 1, method = 'euclidean', dist = F){
             for(i in 1:length(x[,1])){ # for each vector in the matrix x
                 d[i] <- sqrt(sum((v-x[i,])^2))
             }
-        }
-        
-        if(method == 'angle_based'){
+        }else if(method == 'angle_based'){
             for(i in 1:length(x[,1])){
                 d[i] <- sum(v*x[i,])*sum(v*v)*sum(x[i,]*x[i,])
             }
-        }
-        
-        if(method == 'mahalanobis'){
+        }else if(method == 'mahalanobis'){
             for(i in 1:length(x[,1])){
                 d[i] <- sum(abs(v-x[i,]))
             }

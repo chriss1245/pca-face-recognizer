@@ -1,2 +1,5 @@
 OpenImageR
 rstudioapi
+doParallel
+ggplot2
+foreach

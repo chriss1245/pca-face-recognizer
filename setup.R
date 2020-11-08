@@ -155,9 +155,10 @@ classifier.beta <- function(parameters, newdata){  # the parameters of knn and p
 
 library(doParallel)
 ncores = detectCores()
-cl = makeCluster(ncores) 
+cl = makeCluster(ncores-1)
 registerDoParallel(cl)
 pred = NULL
+predictions<- NULL 
 
 pred <-foreach(h=seq(1,150,6), '.combine' = rbind )%dopar%{
   library(foreach)
@@ -168,14 +169,14 @@ pred <-foreach(h=seq(1,150,6), '.combine' = rbind )%dopar%{
   partitions <- sample(rep(1:k_folds, 144/k_folds), replace = F)
   
   
-  s <- foreach(i=1:k_folds, '.combine' = rbind)%dopar%{
+  foreach(i=1:k_folds, '.combine' = rbind)%do%{
     
     train.data <- data[partitions != i,-1]
     train.labels <- data[partitions !=i, 1]
     test.data <- rbind(data[partitions == i,-1],data.inv[,-1])
     test.labels <- c(data[partitions == i, 1], rep(0, length(data.inv[,1])))
     
-    parameters = list(x = train.data, y = train.labels, k =1, method = 'euclidean', threshold = 57.9, similarity = T, pca.var=87, scale = T, Center = T)
+    parameters = list(x = train.data, y = train.labels, k =1, method = 'euclidean', threshold = 49.89531 , similarity = T, pca.var=87, scale = T, Center = T)
     
     cbind(true.label = test.labels, classifier.beta(parameters, test.data))
   }
@@ -184,9 +185,11 @@ pred <-foreach(h=seq(1,150,6), '.combine' = rbind )%dopar%{
 }
 
 stopCluster(cl)
-predictions <- rbind.data.frame(predictions, cbind.data.frame(pred, method = 'euclidean'))
+pred<- as.data.frame(pred)
+save(pred, file = 'rdata/final_pred.RData')
+predictions <- rbind.data.frame(predictions, cbind.data.frame(pred, method = 'manhattan'))
 #predictions.pca <- rbind.data.frame(predictions.pca, cbind.data.frame(pred, method ='manhattan 95'))
-#save(predictions, file = 'rdata/predictions_pca.RData')
+save(predictions, file = 'rdata/predictions_pca.RData')
 
 
 
@@ -209,6 +212,7 @@ predictions0$distance[predictions0$method == 'manhattan 87'] <- scale(prediction
 predictions0$distance[predictions0$method == 'manhattan 95'] <- scale(predictions0$distance[predictions0$method == 'manhattan 95'], center = F, scale = T)
 predictions0$distance[predictions0$method == 'euclidean 87'] <- scale(predictions0$distance[predictions0$method == 'euclidean 87'], center = F, scale = T)
 predictions0$distance[predictions0$method == 'euclidean 95'] <- scale(predictions0$distance[predictions0$method == 'euclidean 95'], center = F, scale = T)
+
 
 
 ggplot() +
@@ -368,8 +372,8 @@ predictions0$distance[predictions0$method == 'euclidean'] <- scale(predictions0$
 
 
 ggplot() +
-  geom_boxplot(data = predictions1, aes(x = distance, y = method))+
-  geom_boxplot(data = predictions0, aes(x =distance, y = method, col = method))
+  geom_boxplot(data = predictions0, aes(x = distance, y = method))+
+  geom_boxplot(data = predictions1, aes(x =distance, y = method, col = method))
 
 # Winner euclidean
 
@@ -393,7 +397,7 @@ ggplot() +
 true.distances  <- predictions1
 true.distances <- sort(true.distances[,3])
 quantile(true.distances, 0.975)
-57.90197
+49.895
 
 #---------------------------Finally--------------------------------------------------
 
@@ -401,7 +405,7 @@ parameters = list(x = images[,-1],
                       y = images[,1], 
                       k =1, 
                       method = 'manhattan', 
-                      threshold = 57.90, 
+                      threshold = 50, 
                       similarity = F, 
                       pca.var=100, 
                       scale = F, 
@@ -409,15 +413,16 @@ parameters = list(x = images[,-1],
 save(parameters, file ='rdata/parameters_classifier.RData')
 
 # We ran again the loop of the beginning but using the new parameters and we got
-load('rdata/final_pred_pca.RData')
+load('rdata/final_pred.RData')
 f1 <- pred[pred[,1] == pred[,2],]
-f0 <- pred[pred[,1] != pred[,1],]
+f0 <- pred[(pred[,1] != pred[,2]),]
 ggplot() +
   geom_boxplot(data =f0, aes(y = distance, x = true.label, group = true.label), col = 'blue') +
   geom_boxplot(data = f1, aes(x = true.label, y = distance, group = true.label))+
-  geom_hline(yintercept = 57.9)
+  geom_hline(yintercept = 49.895) +
+  scale_x_continuous(breaks = 0:25)
 
 #An acuraccy of
 sum(pred[,1] == pred[,2])/length(pred[,1])
-#0.9933
+#0.9538
 
